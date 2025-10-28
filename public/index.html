@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Denkiya's Notes</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<!-- SOL: NOTEBOOK + SECTIONS -->
+<div id="leftPane">
+  <div id="brandCard">
+    <div id="brandTitle">Denkiya's Notes</div>
+    <div id="brandSub">kişisel kasa / private</div>
+  </div>
+
+  <div id="sectionList"><!-- js dolduruyor (sectionlar + '+ Yeni bölüm' butonu) --></div>
+
+  <div id="leftFooter">
+    <div class="row">
+      <div class="label">Sync</div>
+      <button class="smallAction" id="syncNowBtn">Sync Now</button>
+    </div>
+    <div class="row">
+      <div class="label">Status açıldı :</div>
+      <div id="miniStatus">idle</div>
+    </div>
+    <div class="row">
+      <div class="label">Ayarlar</div>
+      <button class="smallAction" id="settingsBtn">...</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORTA: PAGES OF ACTIVE SECTION -->
+<div id="middlePane">
+  <div id="middleHeader">
+    <div id="activeSectionName">Bölüm seçilmedi</div>
+    <button class="smallAction" id="renameSectionBtn">⋮</button>
+  </div>
+
+  <div id="pageList"><!-- js dolduruyor (sayfalar + '+ Yeni sayfa' butonu) --></div>
+</div>
+
+<!-- SAĞ: EDITOR -->
+<div id="editorPane">
+  <div id="topBar">
+    <div id="pageTitleWrap">
+      <div id="pageName">Seçili sayfa yok</div>
+      <div id="pagePath"></div>
+    </div>
+    <div id="actionsWrap">
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div id="editorWrap">
+    <textarea id="editor" placeholder="Notunu yaz..."></textarea>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay" class="overlay hidden">
+  <div id="modalBox" class="modalBox">
+    <div id="modalTitle" class="modalTitle">Modal Title</div>
+    <div id="modalBody" class="modalBody"></div>
+    <div class="modalActions">
+      <button id="modalCancel" class="modalBtn cancelBtn">Vazgeç</button>
+      <button id="modalConfirm" class="modalBtn confirmBtn">Onayla</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
