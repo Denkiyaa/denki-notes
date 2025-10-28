@@ -4,74 +4,126 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Denkiya's Notes</title>
-  <link rel="stylesheet" href="/style.css"/>
+
+  <!-- styles -->
+  <link rel="stylesheet" href="/css/layout.css"/>
+  <link rel="stylesheet" href="/css/editor.css"/>
 </head>
 <body>
 
-<!-- SOL: NOTEBOOK + SECTIONS -->
-<div id="leftPane">
-  <div id="brandCard">
-    <div id="brandTitle">Denkiya's Notes</div>
-    <div id="brandSub">kişisel kasa / private</div>
+  <!-- SOL: NOTEBOOK + SECTIONS -->
+  <aside id="leftPane">
+    <div id="brandCard">
+      <div id="brandTitle">Denkiya's Notes</div>
+      <div id="brandSub">kişisel kasa / private</div>
+    </div>
+
+    <!-- section listesi + '+ Yeni bölüm' butonu JS ile dolduruluyor -->
+    <div id="sectionList"></div>
+
+    <!-- footer -->
+    <div id="leftFooter">
+      <div class="row">
+        <div class="label">Sync</div>
+        <button class="smallAction" id="syncNowBtn">Sync Now</button>
+      </div>
+      <div class="row">
+        <div class="label">Durum</div>
+        <div id="miniStatus">idle</div>
+      </div>
+      <div class="row">
+        <div class="label">Ayarlar</div>
+        <button class="smallAction" id="settingsBtn">...</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ORTA: aktif bölümün sayfaları -->
+  <section id="middlePane">
+    <div id="middleHeader">
+      <div id="activeSectionName">Bölüm seçilmedi</div>
+      <button class="smallAction" id="renameSectionBtn">⋮</button>
+    </div>
+
+    <!-- sayfa kartları + '+ Yeni sayfa' butonu JS ile dolduruluyor -->
+    <div id="pageList"></div>
+  </section>
+
+  <!-- SAĞ: editor alanı -->
+  <main id="editorPane">
+    <!-- ÜST BAR: Sayfa başlığı, path, status -->
+    <header id="topBar">
+      <div id="pageTitleWrap">
+        <div id="pageName">Seçili sayfa yok</div>
+        <div id="pagePath"></div>
+      </div>
+      <div id="actionsWrap">
+        <div id="status"></div>
+      </div>
+    </header>
+
+    <!-- FORMAT BAR doğrudan title'ın ALTINDA -->
+    <div id="formatBar">
+      <button class="fmtBtn" data-cmd="bold"><b>B</b></button>
+      <button class="fmtBtn" data-cmd="italic"><i>İ</i></button>
+      <button class="fmtBtn" data-cmd="underline"><u>U</u></button>
+      <button class="fmtBtn" data-cmd="h1">H1</button>
+    </div>
+
+    <!-- TEXTAREA -->
+    <div id="editorWrap">
+      <textarea id="editor" placeholder="Notunu yaz..."></textarea>
+    </div>
+  </main>
+
+  <!-- GENEL CRUD MODAL -->
+  <div id="modalOverlay" class="overlay hidden">
+    <div id="modalBox" class="modalBox">
+      <div id="modalTitle" class="modalTitle">Modal Title</div>
+      <div id="modalBody" class="modalBody"></div>
+      <div class="modalActions">
+        <button id="modalCancel" class="modalBtn cancelBtn">Vazgeç</button>
+        <button id="modalConfirm" class="modalBtn confirmBtn">Onayla</button>
+      </div>
+    </div>
   </div>
 
-  <div id="sectionList"><!-- js dolduruyor (sectionlar + '+ Yeni bölüm' butonu) --></div>
+  <!-- AYARLAR MODALI -->
+  <div id="settingsOverlay" class="overlay hidden">
+    <div class="modalBox">
+      <div class="modalTitle">Ayarlar</div>
+      <div class="modalBody">
 
-  <div id="leftFooter">
-    <div class="row">
-      <div class="label">Sync</div>
-      <button class="smallAction" id="syncNowBtn">Sync Now</button>
-    </div>
-    <div class="row">
-      <div class="label">Status açıldı :</div>
-      <div id="miniStatus">idle</div>
-    </div>
-    <div class="row">
-      <div class="label">Ayarlar</div>
-      <button class="smallAction" id="settingsBtn">...</button>
-    </div>
-  </div>
-</div>
+        <div class="settingsRow">
+          <div class="settingsLabel">Sync şimdi</div>
+          <button class="smallAction" id="settingsSyncBtn">Çek / Güncelle</button>
+        </div>
 
-<!-- ORTA: PAGES OF ACTIVE SECTION -->
-<div id="middlePane">
-  <div id="middleHeader">
-    <div id="activeSectionName">Bölüm seçilmedi</div>
-    <button class="smallAction" id="renameSectionBtn">⋮</button>
-  </div>
+        <div class="settingsRow">
+          <div class="settingsLabel">Dışa aktar (zip)</div>
+          <button class="smallAction" id="settingsExportBtn">İndir (TODO)</button>
+        </div>
 
-  <div id="pageList"><!-- js dolduruyor (sayfalar + '+ Yeni sayfa' butonu) --></div>
-</div>
+        <div class="settingsRow">
+          <div class="settingsLabel">Çıkış</div>
+          <button class="smallAction dangerBorder" id="settingsLogoutBtn">Logout (TODO)</button>
+        </div>
 
-<!-- SAĞ: EDITOR -->
-<div id="editorPane">
-  <div id="topBar">
-    <div id="pageTitleWrap">
-      <div id="pageName">Seçili sayfa yok</div>
-      <div id="pagePath"></div>
-    </div>
-    <div id="actionsWrap">
-      <div id="status"></div>
+        <div style="font-size:11px;color:#666;margin-top:12px;">
+          Versiyon: local-dev<br/>
+          Son snapshot: <span id="settingsLastGen">-</span>
+        </div>
+      </div>
+
+      <div class="modalActions">
+        <button id="settingsCloseBtn" class="modalBtn cancelBtn">Kapat</button>
+      </div>
     </div>
   </div>
 
-  <div id="editorWrap">
-    <textarea id="editor" placeholder="Notunu yaz..."></textarea>
-  </div>
-</div>
-
-<!-- MODAL -->
-<div id="modalOverlay" class="overlay hidden">
-  <div id="modalBox" class="modalBox">
-    <div id="modalTitle" class="modalTitle">Modal Title</div>
-    <div id="modalBody" class="modalBody"></div>
-    <div class="modalActions">
-      <button id="modalCancel" class="modalBtn cancelBtn">Vazgeç</button>
-      <button id="modalConfirm" class="modalBtn confirmBtn">Onayla</button>
-    </div>
-  </div>
-</div>
-
-<script src="/app.js"></script>
+  <!-- scripts -->
+  <script src="/js/state.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/main.js"></script>
 </body>
 </html>

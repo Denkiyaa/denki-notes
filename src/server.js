@@ -10,6 +10,9 @@ const { ensureDataLayout } = require("./services/notesService");
 
 const app = express();
 
+// -------- constants --------
+const DELETED_FILE = path.join(DATA_DIR, "deletedSections.json");
+
 // --- middleware ---
 app.use(cors({
   origin: "*",
@@ -94,6 +97,30 @@ async function deletePageObj(topic, section, page) {
   }
 }
 
+// deletedSections.json yükle
+async function loadDeletedList() {
+  if (!fs.existsSync(DELETED_FILE)) {
+    return [];
+  }
+  try {
+    const raw = await fsp.readFile(DELETED_FILE, "utf8");
+    return JSON.parse(raw);
+  } catch (e) {
+    return [];
+  }
+}
+
+// deletedSections.json içine ekle
+async function appendDeleted(topicSlug, sectionSlug) {
+  const list = await loadDeletedList();
+  list.push({
+    topic: topicSlug,
+    section: sectionSlug,
+    deletedAt: new Date().toISOString()
+  });
+  await fsp.writeFile(DELETED_FILE, JSON.stringify(list, null, 2), "utf8");
+}
+
 // snapshot (topics -> sections -> pages)
 async function buildSnapshot() {
   // topics = DATA_DIR altındaki klasörler
@@ -149,7 +176,7 @@ async function buildSnapshot() {
 
       sectionsOut.push({
         slug: sectionSlug,
-        title: sectionSlug.toUpperCase(), // şimdilik otomatik
+        title: sectionSlug.toUpperCase(), // TODO: ileride custom title
         pages: pagesArr
       });
     }
@@ -180,8 +207,13 @@ app.get("/api/snapshot", async (req,res)=>{
   res.json(snap);
 });
 
+// soft delete listesi
+app.get("/api/deleted-sections", async (req,res)=>{
+  const list = await loadDeletedList();
+  res.json({ deleted: list });
+});
+
 // TEK SAYFA OKU
-// GET /api/page/:topic/:section/:page
 app.get("/api/page/:topic/:section/:page", async (req,res)=>{
   const { topic, section, page } = req.params;
   const obj = await loadPageObj(topic, section, page);
@@ -193,8 +225,6 @@ app.get("/api/page/:topic/:section/:page", async (req,res)=>{
 });
 
 // SAYFA OLUŞTUR / GÜNCELLE
-// PUT /api/page/:topic/:section/:page
-// body: { content, title? }
 app.put("/api/page/:topic/:section/:page", async (req,res)=>{
   const { topic, section, page } = req.params;
   const { content, title } = req.body || {};
@@ -203,8 +233,6 @@ app.put("/api/page/:topic/:section/:page", async (req,res)=>{
 });
 
 // SAYFA YENİDEN ADLANDIR
-// POST /api/page/:topic/:section/:page/rename
-// body: { newSlug, newTitle }
 app.post("/api/page/:topic/:section/:page/rename", async (req,res)=>{
   const { topic, section, page } = req.params;
   const { newSlug, newTitle } = req.body || {};
@@ -213,12 +241,10 @@ app.post("/api/page/:topic/:section/:page/rename", async (req,res)=>{
   }
 
   const merged = await renamePageObj(topic, section, page, newSlug, newTitle);
-
   res.json({ ok:true, updatedAt: merged.updatedAt, newSlug });
 });
 
 // SAYFA SİL
-// DELETE /api/page/:topic/:section/:page
 app.delete("/api/page/:topic/:section/:page", async (req,res)=>{
   const { topic, section, page } = req.params;
   await deletePageObj(topic, section, page);
@@ -226,8 +252,6 @@ app.delete("/api/page/:topic/:section/:page", async (req,res)=>{
 });
 
 // SECTION OLUŞTUR
-// POST /api/section/:topic
-// body: { sectionSlug }
 app.post("/api/section/:topic", async (req,res)=>{
   const { topic } = req.params;
   const { sectionSlug } = req.body || {};
@@ -242,8 +266,6 @@ app.post("/api/section/:topic", async (req,res)=>{
 });
 
 // SECTION YENİDEN ADLANDIR
-// POST /api/section/:topic/:section/rename
-// body: { newSectionSlug }
 app.post("/api/section/:topic/:section/rename", async (req,res)=>{
   const { topic, section } = req.params;
   const { newSectionSlug } = req.body || {};
@@ -264,20 +286,39 @@ app.post("/api/section/:topic/:section/rename", async (req,res)=>{
   res.json({ ok:true });
 });
 
-// SECTION SİL (içindeki tüm sayfalarla beraber)
-// DELETE /api/section/:topic/:section
+// SECTION SİL (+ soft delete marker yaz)
 app.delete("/api/section/:topic/:section", async (req,res)=>{
   const { topic, section } = req.params;
   const dir = path.join(DATA_DIR, topic, section);
+
   if(fs.existsSync(dir)){
+    // 1) marker ekle
+    await appendDeleted(topic, section);
+    // 2) gerçekten siliyoruz VPS tarafında
     await fsp.rm(dir, { recursive: true, force: true });
   }
+
+  res.json({ ok:true });
+});
+
+// SIRALAMA (drag-drop ileride kullanıyoruz)
+app.post("/api/section/:topic/:section/reorder-pages", async (req,res)=>{
+  const { topic, section } = req.params;
+  const { order } = req.body || {};
+  if(!Array.isArray(order)){
+    return res.status(400).json({error:"order array required"});
+  }
+
+  const sectionDir = path.join(DATA_DIR, topic, section);
+  await fsp.mkdir(sectionDir, { recursive: true });
+
+  const orderFile = path.join(sectionDir, ".order.json");
+  await fsp.writeFile(orderFile, JSON.stringify(order,null,2),"utf8");
+
   res.json({ ok:true });
 });
 
 // MOBİL SYNC PUSH
-// POST /api/mobile-sync/push
-// body: { topic, section, page, title, content, clientUpdatedAt }
 app.post("/api/mobile-sync/push", async (req,res)=>{
   const { topic, section, page, title, content, clientUpdatedAt } = req.body || {};
   if(!topic || !section || !page || !clientUpdatedAt){

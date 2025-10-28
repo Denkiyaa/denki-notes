@@ -1,45 +1,4 @@
-// GLOBAL STATE
-let snapshotCache = null;
-
-let currentTopic   = null; // slug
-let currentSection = null; // slug
-let currentPage    = null; // slug
-
-// autosave
-let dirty = false;
-let saveTimer = null;
-let savingNow = false;
-
-// modal
-let modalMode = null; // createSection, renameSection, deleteSection, createPage, renamePage, deletePage
-let modalData = {};   // { topicSlug, sectionSlug, pageSlug }
-
-// helpers
-function setStatus(msg){
-  const s1 = document.getElementById("status");
-  const s2 = document.getElementById("miniStatus");
-  if(s1) s1.textContent = msg || "";
-  if(s2) s2.textContent = msg || "idle";
-}
-
-async function callApi(url, opts = {}){
-  const r = await fetch(url, opts);
-  return r;
-}
-
-function formatLocal(ts){
-  if(!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleString("tr-TR", {
-    year:"numeric",
-    month:"2-digit",
-    day:"2-digit",
-    hour:"2-digit",
-    minute:"2-digit"
-  });
-}
-
-// SNAPSHOT LOAD
+// snapshot çek ve her şeyi render et
 async function fetchSnapshot(){
   setStatus("yükleniyor...");
   const r = await callApi("/api/snapshot");
@@ -47,45 +6,46 @@ async function fetchSnapshot(){
     setStatus("snapshot hata "+r.status);
     return;
   }
-  snapshotCache = await r.json();
+  AppState.snapshotCache = await r.json();
 
   renderSections();
   renderPages();
   renderEditorHeader();
 
-  // hiç seçim yoksa ilk topic/section/page ile aç
-  if(!currentTopic || !currentSection || !currentPage){
-    const firstTopic   = snapshotCache.topics?.[0];
+  // seçili yoksa ilk page'e git
+  if(!AppState.currentTopic || !AppState.currentSection || !AppState.currentPage){
+    const firstTopic   = AppState.snapshotCache.topics?.[0];
     const firstSection = firstTopic?.sections?.[0];
     const firstPage    = firstSection?.pages?.[0];
     if(firstTopic && firstSection && firstPage){
       openPage(firstTopic.slug, firstSection.slug, firstPage.slug);
     }
   } else {
-    openPage(currentTopic, currentSection, currentPage);
+    openPage(AppState.currentTopic, AppState.currentSection, AppState.currentPage);
   }
 
   setStatus("hazır");
 }
+window.fetchSnapshot = fetchSnapshot;
 
-// SECTION RENDER (LEFT PANE)
+
+// LEFT: sections
 function renderSections(){
   const cont = document.getElementById("sectionList");
+  if(!cont) return;
   cont.innerHTML = "";
 
-  const topic = snapshotCache.topics?.[0];
+  const topic = AppState.snapshotCache?.topics?.[0];
   if(!topic){
-    cont.innerHTML = "<div style='color:#888;font-size:12px;padding:10px;'>topic yok</div>";
+    cont.innerHTML = "<div style='color:#888;font-size:12px;padding:10px;'>bölüm yok</div>";
     return;
   }
 
   topic.sections?.forEach(sec=>{
     const row = document.createElement("div");
     row.className = "sectionRow";
-    row.dataset.topic = topic.slug;
-    row.dataset.section = sec.slug;
 
-    if(currentTopic === topic.slug && currentSection === sec.slug){
+    if(AppState.currentTopic === topic.slug && AppState.currentSection === sec.slug){
       row.classList.add("active");
     }
 
@@ -103,18 +63,17 @@ function renderSections(){
     leftWrap.appendChild(nameDiv);
 
     leftWrap.onclick = ()=>{
-      currentTopic = topic.slug;
-      currentSection = sec.slug;
-
+      AppState.currentTopic   = topic.slug;
+      AppState.currentSection = sec.slug;
       const firstPage = sec.pages?.[0];
-      currentPage = firstPage ? firstPage.slug : null;
+      AppState.currentPage = firstPage ? firstPage.slug : null;
 
       renderSections();
       renderPages();
 
-      if(currentPage){
-        openPage(currentTopic, currentSection, currentPage);
-      }else{
+      if(AppState.currentPage){
+        openPage(AppState.currentTopic, AppState.currentSection, AppState.currentPage);
+      } else {
         clearEditor();
       }
     };
@@ -164,7 +123,7 @@ function renderSections(){
     cont.appendChild(row);
   });
 
-  // "+ Yeni bölüm" butonu (sectionList sonuna)
+  // + Yeni bölüm
   const addSectionBtn = document.createElement("button");
   addSectionBtn.className = "addSectionBtn";
   addSectionBtn.textContent = "+ Yeni bölüm";
@@ -172,32 +131,109 @@ function renderSections(){
     openModal("createSection",{});
   };
   cont.appendChild(addSectionBtn);
+
+  // dış tık kapatsın
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll(".sectionMenuDropdown").forEach(x=>x.style.display="none");
+    document.querySelectorAll(".pageListMenuDropdown").forEach(x=>x.style.display="none");
+  }, { once:true });
 }
+window.renderSections = renderSections;
 
-// PAGES RENDER (MIDDLE PANE)
+
+// MIDDLE: pages list
 function renderPages(){
-  const topic = snapshotCache.topics?.[0];
-
-  const headerNameEl = document.getElementById("activeSectionName");
   const listEl = document.getElementById("pageList");
+  const headerNameEl = document.getElementById("activeSectionName");
+  if(!listEl || !headerNameEl) return;
 
-  headerNameEl.textContent = "Bölüm seçilmedi";
+  const topic = AppState.snapshotCache?.topics?.[0];
+  if(!topic){
+    headerNameEl.textContent = "Bölüm seçilmedi";
+    listEl.innerHTML = "";
+    return;
+  }
+
+  const sec = topic.sections?.find(s=>s.slug===AppState.currentSection);
+  if(!sec){
+    headerNameEl.textContent = "Bölüm seçilmedi";
+    listEl.innerHTML = "";
+    return;
+  }
+
+  headerNameEl.textContent = sec.title || sec.slug;
   listEl.innerHTML = "";
-
-  if(!topic) return;
-
-  const sec = topic.sections?.find(s=>s.slug===currentSection);
-  if(!sec) return;
-
-  headerNameEl.textContent = (sec.title || sec.slug).toUpperCase();
 
   sec.pages?.forEach(p=>{
     const item = document.createElement("div");
     item.className = "pageListItem";
-    if(currentTopic===topic.slug && currentSection===sec.slug && currentPage===p.slug){
+    if(AppState.currentTopic===topic.slug &&
+       AppState.currentSection===sec.slug &&
+       AppState.currentPage===p.slug){
       item.classList.add("active");
     }
 
+    // DRAG
+    item.setAttribute("draggable","true");
+
+    item.addEventListener("dragstart",(ev)=>{
+      AppState.dragPageSlug = p.slug;
+      ev.dataTransfer.effectAllowed = "move";
+      item.style.opacity = "0.4";
+    });
+
+    item.addEventListener("dragend",()=>{
+      item.style.opacity = "";
+    });
+
+    item.addEventListener("dragover",(ev)=>{
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "move";
+      item.style.outline = "1px solid var(--bg-active)";
+    });
+
+    item.addEventListener("dragleave",()=>{
+      item.style.outline = "";
+    });
+
+    item.addEventListener("drop", async (ev)=>{
+      ev.preventDefault();
+      item.style.outline = "";
+
+      const fromSlug = AppState.dragPageSlug;
+      const toSlug   = p.slug;
+      AppState.dragPageSlug   = null;
+
+      if(!fromSlug || fromSlug === toSlug) return;
+
+      const secObj = AppState.snapshotCache.topics[0].sections.find(s=>s.slug===AppState.currentSection);
+      if(!secObj) return;
+
+      const order = secObj.pages.map(x=>x.slug);
+      const fromIdx = order.indexOf(fromSlug);
+      const toIdx   = order.indexOf(toSlug);
+      if(fromIdx === -1 || toIdx === -1) return;
+
+      // reorder
+      order.splice(toIdx, 0, order.splice(fromIdx,1)[0]);
+
+      secObj.pages.sort((a,b)=> order.indexOf(a.slug) - order.indexOf(b.slug));
+
+      renderPages();
+
+      try {
+        await callApi(`/api/section/${AppState.currentTopic}/${AppState.currentSection}/reorder-pages`, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ order })
+        });
+        setStatus("sıra kaydedildi");
+      } catch(e){
+        setStatus("sıra kaydedilemedi");
+      }
+    });
+
+    // sayfaya tıkla -> openPage
     item.onclick = ()=>{
       openPage(topic.slug, sec.slug, p.slug);
     };
@@ -208,8 +244,12 @@ function renderPages(){
 
     const metaDiv = document.createElement("div");
     metaDiv.className = "pageListMeta";
-    metaDiv.textContent = formatLocal(p.updatedAt);
+    metaDiv.textContent = formatLocal(p.updatedAt || "");
 
+    item.appendChild(titleDiv);
+    item.appendChild(metaDiv);
+
+    // üç nokta
     const menuBtn = document.createElement("button");
     menuBtn.className = "pageListMenuBtn";
     menuBtn.innerHTML = "⋮";
@@ -252,55 +292,68 @@ function renderPages(){
       dd.style.display = shown ? "none" : "flex";
     };
 
-    item.appendChild(titleDiv);
-    item.appendChild(metaDiv);
     item.appendChild(menuBtn);
     item.appendChild(dd);
 
     listEl.appendChild(item);
   });
 
-  // "+ Yeni sayfa" butonu listenin sonuna
-  const addPageBtn = document.createElement("button");
-  addPageBtn.className = "addPageBtn";
-  addPageBtn.textContent = "+ Yeni sayfa";
-  addPageBtn.onclick = ()=>{
+  // + Yeni sayfa
+  const addBtn = document.createElement("button");
+  addBtn.className = "addPageBtn";
+  addBtn.textContent = "+ Yeni sayfa";
+  addBtn.onclick = ()=>{
+    if(!AppState.currentTopic || !AppState.currentSection){
+      alert("Önce bölüm seç");
+      return;
+    }
     openModal("createPage", {
-      topicSlug: topic.slug,
-      sectionSlug: sec.slug
+      topicSlug: AppState.currentTopic,
+      sectionSlug: AppState.currentSection
     });
   };
-  listEl.appendChild(addPageBtn);
-}
+  listEl.appendChild(addBtn);
 
-// EDITOR HEADER RENDER
+  // dış klikte menüleri kapat
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll(".pageListMenuDropdown").forEach(x=>x.style.display="none");
+    document.querySelectorAll(".sectionMenuDropdown").forEach(x=>x.style.display="none");
+  }, { once:true });
+}
+window.renderPages = renderPages;
+
+
+// RIGHT HEADER
 function renderEditorHeader(){
   const nm = document.getElementById("pageName");
   const ph = document.getElementById("pagePath");
 
-  if(!currentTopic || !currentSection || !currentPage){
+  if(!AppState.currentTopic || !AppState.currentSection || !AppState.currentPage){
     if(nm) nm.textContent = "Seçili sayfa yok";
     if(ph) ph.textContent = "";
     return;
   }
 
-  const topic = snapshotCache.topics?.find(t=>t.slug===currentTopic);
-  const sec   = topic?.sections?.find(s=>s.slug===currentSection);
-  const p     = sec?.pages?.find(x=>x.slug===currentPage);
+  const topic = AppState.snapshotCache.topics?.find(t=>t.slug===AppState.currentTopic);
+  const sec   = topic?.sections?.find(s=>s.slug===AppState.currentSection);
+  const p     = sec?.pages?.find(x=>x.slug===AppState.currentPage);
 
-  if(nm) nm.textContent = p ? (p.title || p.slug) : currentPage;
-  if(ph) ph.textContent = `${currentTopic} / ${currentSection} / ${currentPage}`;
+  if(nm) nm.textContent = p ? (p.title || p.slug) : AppState.currentPage;
+  if(ph) ph.textContent = `${AppState.currentTopic} / ${AppState.currentSection} / ${AppState.currentPage}`;
 }
+window.renderEditorHeader = renderEditorHeader;
 
-// PAGE OPEN
+
+// SAYFA AÇ
 async function openPage(topicSlug, sectionSlug, pageSlug){
-  currentTopic   = topicSlug;
-  currentSection = sectionSlug;
-  currentPage    = pageSlug;
+  AppState.currentTopic   = topicSlug;
+  AppState.currentSection = sectionSlug;
+  AppState.currentPage    = pageSlug;
 
   setStatus("");
 
   let pageData = { content:"", title:pageSlug, updatedAt:null };
+
   try {
     const r = await callApi(`/api/page/${topicSlug}/${sectionSlug}/${pageSlug}`);
     if(r.ok){
@@ -319,7 +372,7 @@ async function openPage(topicSlug, sectionSlug, pageSlug){
   if(ph) ph.textContent = `${topicSlug} / ${sectionSlug} / ${pageSlug}`;
 
   if(pageData.updatedAt){
-    setStatus("açıldı · " + formatLocal(pageData.updatedAt));
+    setStatus(`açıldı · ${formatLocal(pageData.updatedAt)}`);
   } else {
     setStatus("açıldı");
   }
@@ -327,13 +380,15 @@ async function openPage(topicSlug, sectionSlug, pageSlug){
   renderSections();
   renderPages();
 
-  dirty = false;
-  savingNow = false;
-  if(saveTimer){
-    clearTimeout(saveTimer);
-    saveTimer = null;
+  AppState.dirty = false;
+  AppState.savingNow = false;
+  if(AppState.saveTimer){
+    clearTimeout(AppState.saveTimer);
+    AppState.saveTimer = null;
   }
 }
+window.openPage = openPage;
+
 
 // CLEAR EDITOR
 function clearEditor(){
@@ -347,25 +402,28 @@ function clearEditor(){
 
   setStatus("");
 }
+window.clearEditor = clearEditor;
+
 
 // AUTOSAVE
 function markDirty(){
-  if(!currentTopic || !currentSection || !currentPage) return;
-  dirty = true;
-  if(saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(autoSave, 2000);
+  if(!AppState.currentTopic || !AppState.currentSection || !AppState.currentPage) return;
+  AppState.dirty = true;
+  if(AppState.saveTimer) clearTimeout(AppState.saveTimer);
+  AppState.saveTimer = setTimeout(autoSave, 2000);
 }
+window.markDirty = markDirty;
 
 async function autoSave(){
-  if(!dirty) return;
-  if(savingNow) return;
+  if(!AppState.dirty) return;
+  if(AppState.savingNow) return;
 
-  dirty = false;
-  saveTimer = null;
-  savingNow = true;
+  AppState.dirty = false;
+  AppState.saveTimer = null;
+  AppState.savingNow = true;
 
-  if(!currentTopic || !currentSection || !currentPage){
-    savingNow = false;
+  if(!AppState.currentTopic || !AppState.currentSection || !AppState.currentPage){
+    AppState.savingNow = false;
     return;
   }
 
@@ -373,13 +431,13 @@ async function autoSave(){
   const txt = ed ? ed.value : "";
 
   const nm = document.getElementById("pageName");
-  const newTitle = nm ? nm.textContent.trim() : currentPage;
+  const newTitle = nm ? nm.textContent.trim() : AppState.currentPage;
 
   setStatus("kaydediliyor...");
 
   try {
     const r = await callApi(
-      `/api/page/${currentTopic}/${currentSection}/${currentPage}`,
+      `/api/page/${AppState.currentTopic}/${AppState.currentSection}/${AppState.currentPage}`,
       {
         method:"PUT",
         headers:{ "Content-Type":"application/json" },
@@ -389,12 +447,11 @@ async function autoSave(){
 
     if(r.ok){
       const js = await r.json();
-      setStatus("✓ kaydedildi · " + formatLocal(js.updatedAt || ""));
+      setStatus(`✓ kaydedildi · ${formatLocal(js.updatedAt || "")}`);
 
-      // snapshotCache update
-      const topicObj = snapshotCache.topics?.find(t=>t.slug===currentTopic);
-      const secObj   = topicObj?.sections?.find(s=>s.slug===currentSection);
-      const pObj     = secObj?.pages?.find(p=>p.slug===currentPage);
+      const topicObj = AppState.snapshotCache.topics?.find(t=>t.slug===AppState.currentTopic);
+      const secObj   = topicObj?.sections?.find(s=>s.slug===AppState.currentSection);
+      const pObj     = secObj?.pages?.find(pp=>pp.slug===AppState.currentPage);
       if(pObj){
         pObj.content   = txt;
         pObj.title     = newTitle;
@@ -409,16 +466,18 @@ async function autoSave(){
     setStatus("HATA");
   }
 
-  savingNow = false;
-  if(dirty && !saveTimer){
-    saveTimer = setTimeout(autoSave, 2000);
+  AppState.savingNow = false;
+  if(AppState.dirty && !AppState.saveTimer){
+    AppState.saveTimer = setTimeout(autoSave, 2000);
   }
 }
+window.autoSave = autoSave;
 
-// MODAL
+
+// MODAL CRUD
 function openModal(mode, data){
-  modalMode = mode;
-  modalData = data || {};
+  AppState.modalMode = mode;
+  AppState.modalData = data || {};
 
   const ov  = document.getElementById("modalOverlay");
   const tEl = document.getElementById("modalTitle");
@@ -432,7 +491,7 @@ function openModal(mode, data){
     tEl.textContent = "Yeni bölüm (section)";
     bEl.innerHTML = `
       <label>Bölüm slug:</label>
-      <input id="modalInputSectionSlug" type="text" placeholder="GENEL2"/>
+      <input id="modalInputSectionSlug" type="text" placeholder="PERSONAL STUFF"/>
     `;
     cBtn.textContent = "Oluştur";
   }
@@ -499,23 +558,26 @@ function openModal(mode, data){
 
   ov.classList.remove("hidden");
 }
+window.openModal = openModal;
 
 function closeModal(){
   const ov = document.getElementById("modalOverlay");
   ov.classList.add("hidden");
-  modalMode = null;
-  modalData = {};
+  AppState.modalMode = null;
+  AppState.modalData = {};
 }
+window.closeModal = closeModal;
 
-// MODAL CONFIRM HANDLER
+
+// MODAL CONFIRM
 async function handleModalConfirm(){
   // SECTION CREATE
-  if(modalMode === "createSection"){
+  if(AppState.modalMode === "createSection"){
     const inp = document.getElementById("modalInputSectionSlug");
     const newSectionSlug = (inp.value || "").trim();
     if(!newSectionSlug){ return; }
 
-    const topic = snapshotCache.topics?.[0];
+    const topic = AppState.snapshotCache.topics?.[0];
     if(!topic){ closeModal(); return; }
 
     const r = await callApi(`/api/section/${topic.slug}`, {
@@ -524,9 +586,9 @@ async function handleModalConfirm(){
       body: JSON.stringify({ sectionSlug: newSectionSlug })
     });
     if(r.ok){
-      currentTopic   = topic.slug;
-      currentSection = newSectionSlug;
-      currentPage    = null;
+      AppState.currentTopic   = topic.slug;
+      AppState.currentSection = newSectionSlug;
+      AppState.currentPage    = null;
       await fetchSnapshot();
       setStatus("bölüm oluşturuldu");
     } else {
@@ -537,12 +599,12 @@ async function handleModalConfirm(){
   }
 
   // SECTION RENAME
-  if(modalMode === "renameSection"){
+  if(AppState.modalMode === "renameSection"){
     const inp = document.getElementById("modalInputSectionSlug");
     const newSectionSlug = (inp.value || "").trim();
     if(!newSectionSlug){ return; }
 
-    const { topicSlug, sectionSlug } = modalData;
+    const { topicSlug, sectionSlug } = AppState.modalData;
 
     const r = await callApi(`/api/section/${topicSlug}/${sectionSlug}/rename`, {
       method:"POST",
@@ -551,8 +613,8 @@ async function handleModalConfirm(){
     });
 
     if(r.ok){
-      if(currentTopic===topicSlug && currentSection===sectionSlug){
-        currentSection = newSectionSlug;
+      if(AppState.currentTopic===topicSlug && AppState.currentSection===sectionSlug){
+        AppState.currentSection = newSectionSlug;
       }
       await fetchSnapshot();
       setStatus("bölüm yeniden adlandırıldı");
@@ -564,24 +626,24 @@ async function handleModalConfirm(){
   }
 
   // SECTION DELETE
-  if(modalMode === "deleteSection"){
+  if(AppState.modalMode === "deleteSection"){
     const confEl = document.getElementById("modalInputConfirm");
     if(!confEl || confEl.value.trim() !== "DELETE"){
       setStatus("sil iptal");
       closeModal();
       return;
     }
-    const { topicSlug, sectionSlug } = modalData;
+    const { topicSlug, sectionSlug } = AppState.modalData;
 
     const r = await callApi(`/api/section/${topicSlug}/${sectionSlug}`, {
       method:"DELETE"
     });
 
     if(r.ok){
-      if(currentTopic===topicSlug && currentSection===sectionSlug){
-        currentTopic=null;
-        currentSection=null;
-        currentPage=null;
+      if(AppState.currentTopic===topicSlug && AppState.currentSection===sectionSlug){
+        AppState.currentTopic=null;
+        AppState.currentSection=null;
+        AppState.currentPage=null;
         clearEditor();
       }
       await fetchSnapshot();
@@ -594,14 +656,14 @@ async function handleModalConfirm(){
   }
 
   // PAGE CREATE
-  if(modalMode === "createPage"){
+  if(AppState.modalMode === "createPage"){
     const slugEl  = document.getElementById("modalInputSlug");
     const titleEl = document.getElementById("modalInputTitle");
     const newSlug  = (slugEl.value  || "").trim();
     const newTitle = (titleEl.value || "").trim() || newSlug;
     if(!newSlug){ return; }
 
-    const { topicSlug, sectionSlug } = modalData;
+    const { topicSlug, sectionSlug } = AppState.modalData;
 
     await callApi(`/api/page/${topicSlug}/${sectionSlug}/${newSlug}`, {
       method:"PUT",
@@ -609,9 +671,9 @@ async function handleModalConfirm(){
       body: JSON.stringify({ content:"", title:newTitle })
     });
 
-    currentTopic   = topicSlug;
-    currentSection = sectionSlug;
-    currentPage    = newSlug;
+    AppState.currentTopic   = topicSlug;
+    AppState.currentSection = sectionSlug;
+    AppState.currentPage    = newSlug;
 
     await fetchSnapshot();
     openPage(topicSlug, sectionSlug, newSlug);
@@ -620,14 +682,14 @@ async function handleModalConfirm(){
   }
 
   // PAGE RENAME
-  if(modalMode === "renamePage"){
+  if(AppState.modalMode === "renamePage"){
     const slugEl  = document.getElementById("modalInputSlug");
     const titleEl = document.getElementById("modalInputTitle");
     const newSlug  = (slugEl.value  || "").trim();
     const newTitle = (titleEl.value || "").trim() || newSlug;
     if(!newSlug){ return; }
 
-    const { topicSlug, sectionSlug, pageSlug } = modalData;
+    const { topicSlug, sectionSlug, pageSlug } = AppState.modalData;
 
     const r = await callApi(`/api/page/${topicSlug}/${sectionSlug}/${pageSlug}/rename`, {
       method:"POST",
@@ -636,8 +698,10 @@ async function handleModalConfirm(){
     });
 
     if(r.ok){
-      if(currentTopic===topicSlug && currentSection===sectionSlug && currentPage===pageSlug){
-        currentPage = newSlug;
+      if(AppState.currentTopic===topicSlug &&
+         AppState.currentSection===sectionSlug &&
+         AppState.currentPage===pageSlug){
+        AppState.currentPage = newSlug;
       }
       await fetchSnapshot();
       openPage(topicSlug, sectionSlug, newSlug);
@@ -650,7 +714,7 @@ async function handleModalConfirm(){
   }
 
   // PAGE DELETE
-  if(modalMode === "deletePage"){
+  if(AppState.modalMode === "deletePage"){
     const confEl = document.getElementById("modalInputConfirm");
     if(!confEl || confEl.value.trim() !== "DELETE"){
       setStatus("sil iptal");
@@ -658,15 +722,17 @@ async function handleModalConfirm(){
       return;
     }
 
-    const { topicSlug, sectionSlug, pageSlug } = modalData;
+    const { topicSlug, sectionSlug, pageSlug } = AppState.modalData;
 
     const r = await callApi(`/api/page/${topicSlug}/${sectionSlug}/${pageSlug}`, {
       method:"DELETE"
     });
 
     if(r.ok){
-      if(currentTopic===topicSlug && currentSection===sectionSlug && currentPage===pageSlug){
-        currentPage = null;
+      if(AppState.currentTopic===topicSlug &&
+         AppState.currentSection===sectionSlug &&
+         AppState.currentPage===pageSlug){
+        AppState.currentPage = null;
         clearEditor();
       }
       await fetchSnapshot();
@@ -678,53 +744,27 @@ async function handleModalConfirm(){
     return;
   }
 }
+window.handleModalConfirm = handleModalConfirm;
 
-// WIRING
-function wireUI(){
-  const ed = document.getElementById("editor");
-  if(ed){
-    ed.addEventListener("input", markDirty);
-  }
 
-  const cancelBtn = document.getElementById("modalCancel");
-  if(cancelBtn){
-    cancelBtn.onclick = closeModal;
-  }
-  const confirmBtn = document.getElementById("modalConfirm");
-  if(confirmBtn){
-    confirmBtn.onclick = handleModalConfirm;
+// SETTINGS MODAL
+function openSettingsModal(){
+  const genEl = document.getElementById("settingsLastGen");
+  if(genEl && AppState.snapshotCache?.generatedAt){
+    genEl.textContent = formatLocal(AppState.snapshotCache.generatedAt);
   }
 
-  const renameSectionBtn = document.getElementById("renameSectionBtn");
-  if(renameSectionBtn){
-    renameSectionBtn.onclick = ()=>{
-      if(!currentTopic || !currentSection){
-        alert("Önce bölüm seç");
-        return;
-      }
-      openModal("renameSection", {
-        topicSlug: currentTopic,
-        sectionSlug: currentSection
-      });
-    };
-  }
-
-  const syncNowBtn = document.getElementById("syncNowBtn");
-  if(syncNowBtn){
-    syncNowBtn.onclick = async ()=>{
-      setStatus("snapshot yenileniyor...");
-      await fetchSnapshot();
-    };
-  }
-
-  const settingsBtn = document.getElementById("settingsBtn");
-  if(settingsBtn){
-    settingsBtn.onclick = ()=>{
-      alert("Ayarlar TODO (VPS URL / Offline sync)");
-    };
-  }
+  document.getElementById("settingsOverlay").classList.remove("hidden");
 }
+window.openSettingsModal = openSettingsModal;
 
-// BOOT
-wireUI();
-fetchSnapshot();
+function closeSettingsModal(){
+  document.getElementById("settingsOverlay").classList.add("hidden");
+}
+window.closeSettingsModal = closeSettingsModal;
+
+async function handleSettingsSync(){
+  setStatus("snapshot yenileniyor...");
+  await fetchSnapshot();
+}
+window.handleSettingsSync = handleSettingsSync;

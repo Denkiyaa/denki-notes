@@ -45,6 +45,7 @@ body{
   display:flex;
   flex-direction:column;
   min-height:0;
+  overflow:hidden;
 }
 
 #brandCard{
@@ -71,8 +72,12 @@ body{
   flex:1;
   min-height:0;
   overflow-y:auto;
+  overflow-x:hidden;
   padding:0 var(--pad-md);
   box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
 
 .sectionRow{
@@ -81,20 +86,24 @@ body{
   border:0;
   color:var(--text-main);
   width:100%;
+  max-width:100%;
+  box-sizing:border-box;
   text-align:left;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:8px 10px;
+  padding:8px 32px 8px 10px;
   border-radius:var(--radius-md);
   font-size:14px;
   line-height:1.4;
   cursor:pointer;
   margin-bottom:4px;
+  overflow:hidden;
 }
 .sectionRow.active{
   background:var(--bg-active);
 }
+
 .sectionLabelWrap{
   display:flex;
   align-items:center;
@@ -119,6 +128,9 @@ body{
 }
 
 .sectionMenuBtn{
+  position:absolute;
+  right:6px;
+  top:8px;
   background:transparent;
   border:0;
   color:#fff;
@@ -132,9 +144,10 @@ body{
 }
 .sectionMenuDropdown{
   position:absolute;
-  right:0;
+  right:6px;
   top:32px;
   min-width:160px;
+  max-width:200px;
   background:var(--bg-card);
   border:1px solid var(--border);
   border-radius:var(--radius-md);
@@ -144,6 +157,8 @@ body{
   display:none;
   flex-direction:column;
   z-index:9999;
+  box-sizing:border-box;
+  overflow:hidden;
 }
 .sectionMenuDropdown button{
   background:none;
@@ -177,7 +192,7 @@ body{
   font-size:14px;
   line-height:1.4;
   cursor:pointer;
-  margin:10px 0 var(--pad-md) 0;
+  margin:12px 0 20px 0;
 }
 .addSectionBtn:hover{
   background:#4a4a51;
@@ -227,6 +242,7 @@ body{
   display:flex;
   flex-direction:column;
   min-height:0;
+  overflow:hidden;
 }
 
 #middleHeader{
@@ -247,6 +263,10 @@ body{
   display:flex;
   align-items:center;
   gap:8px;
+  max-width:calc(100% - 40px);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 #renameSectionBtn{
   background:#303036;
@@ -262,8 +282,12 @@ body{
 #pageList{
   flex:1;
   overflow-y:auto;
+  overflow-x:hidden;
   padding:var(--pad-md);
   box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
 .pageListItem{
@@ -273,34 +297,44 @@ body{
   box-shadow:var(--shadow-card);
   border:0;
   width:100%;
+  max-width:100%;
+  box-sizing:border-box;
   text-align:left;
   color:#fff;
-  padding:var(--pad-sm) var(--pad-md) var(--pad-sm) var(--pad-md);
+  padding:var(--pad-sm) 32px var(--pad-sm) var(--pad-md);
   font-size:13px;
   line-height:1.4;
-  margin-bottom:8px;
   cursor:pointer;
   display:flex;
   flex-direction:column;
+  overflow:hidden;
+  z-index:1;
 }
 .pageListItem.active{
   background:var(--bg-active);
+  z-index:2;
 }
+
 .pageListTitle{
   font-size:13px;
   font-weight:500;
   color:#fff;
-  padding-right:24px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .pageListMeta{
   font-size:10px;
   color:#888;
   margin-top:2px;
-  padding-right:24px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
+
 .pageListMenuBtn{
   position:absolute;
-  right:8px;
+  right:6px;
   top:8px;
   background:transparent;
   border:0;
@@ -309,15 +343,17 @@ body{
   line-height:1;
   padding:4px 6px;
   cursor:pointer;
+  z-index:10000;
 }
 .pageListMenuBtn:hover{
   color:var(--danger);
 }
 .pageListMenuDropdown{
   position:absolute;
-  right:8px;
+  right:6px;
   top:30px;
   min-width:150px;
+  max-width:200px;
   background:var(--bg-card);
   border:1px solid var(--border);
   border-radius:var(--radius-md);
@@ -327,6 +363,8 @@ body{
   display:none;
   flex-direction:column;
   z-index:9999;
+  box-sizing:border-box;
+  overflow:hidden;
 }
 .pageListMenuDropdown button{
   background:none;
@@ -360,83 +398,14 @@ body{
   font-size:14px;
   line-height:1.4;
   cursor:pointer;
-  margin-top:10px;
-  margin-bottom:var(--pad-md);
+  margin-top:8px;
+  margin-bottom:8px;
 }
 .addPageBtn:hover{
   background:#4a4a51;
 }
 
-/* RIGHT (EDITOR) */
-#editorPane{
-  flex:1;
-  background:var(--bg-col3);
-  display:flex;
-  flex-direction:column;
-  min-width:0;
-  min-height:0;
-}
-
-#topBar{
-  background:var(--bg-col1);
-  border-bottom:1px solid var(--border);
-  padding:var(--pad-md) var(--pad-lg);
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  flex-wrap:wrap;
-  gap:10px;
-}
-#pageTitleWrap{
-  display:flex;
-  flex-direction:column;
-}
-#pageName{
-  color:var(--text-main);
-  font-size:15px;
-  font-weight:600;
-  line-height:1.3;
-}
-#pagePath{
-  font-size:12px;
-  color:var(--text-dim);
-  line-height:1.3;
-  margin-top:3px;
-}
-#actionsWrap{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:center;
-}
-#status{
-  font-size:12px;
-  color:#6f6;
-  min-width:80px;
-}
-
-#editorWrap{
-  flex:1;
-  padding:var(--pad-lg);
-  box-sizing:border-box;
-  overflow:auto;
-}
-#editor{
-  width:100%;
-  min-height:60vh;
-  background:var(--bg-editor);
-  color:#fff;
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-  padding:var(--pad-md);
-  font-family:monospace;
-  font-size:14px;
-  line-height:1.4;
-  box-sizing:border-box;
-  resize:none;
-}
-
-/* MODAL */
+/* MODAL BASE */
 .overlay{
   position:fixed;
   inset:0;
@@ -513,9 +482,62 @@ body{
   color:#fff;
 }
 
+.settingsRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+  font-size:13px;
+  color:var(--text-main);
+}
+.settingsLabel{
+  color:var(--text-main);
+  font-size:13px;
+  line-height:1.4;
+}
+.dangerBorder{
+  border-color:var(--danger) !important;
+  color:var(--danger) !important;
+}
+.dangerBorder:hover{
+  background:var(--bg-danger) !important;
+  color:#fff !important;
+  border-color:var(--bg-danger) !important;
+}
+
+/* RESPONSIVE */
 @media(max-width:800px){
   #leftPane{width:200px;min-width:200px;max-width:200px;}
   #middlePane{width:220px;min-width:220px;max-width:220px;}
-  #editor{font-size:13px;}
   #brandTitle{font-size:14px;}
+}
+
+/* Scrollbars */
+#sectionList::-webkit-scrollbar,
+#pageList::-webkit-scrollbar,
+#editorWrap::-webkit-scrollbar {
+  width:4px;
+}
+#sectionList::-webkit-scrollbar-track,
+#pageList::-webkit-scrollbar-track,
+#editorWrap::-webkit-scrollbar-track {
+  background:transparent;
+}
+#sectionList::-webkit-scrollbar-thumb,
+#pageList::-webkit-scrollbar-thumb,
+#editorWrap::-webkit-scrollbar-thumb {
+  background:#5555;
+  border-radius:4px;
+}
+#sectionList:hover::-webkit-scrollbar-thumb,
+#pageList:hover::-webkit-scrollbar-thumb,
+#editorWrap:hover::-webkit-scrollbar-thumb {
+  background:#777a;
+}
+
+#sectionList,
+#pageList,
+#editorWrap{
+  scrollbar-width:thin;
+  scrollbar-color:#5555 transparent;
 }
