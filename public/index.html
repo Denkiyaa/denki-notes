@@ -5,23 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Denkiya's Notes</title>
 
-  <!-- styles -->
   <link rel="stylesheet" href="/css/layout.css"/>
   <link rel="stylesheet" href="/css/editor.css"/>
 </head>
 <body>
 
   <!-- SOL: NOTEBOOK + SECTIONS -->
-  <aside id="leftPane">
+  <div id="leftPane">
     <div id="brandCard">
       <div id="brandTitle">Denkiya's Notes</div>
       <div id="brandSub">kişisel kasa / private</div>
     </div>
 
-    <!-- section listesi + '+ Yeni bölüm' butonu JS ile dolduruluyor -->
+    <!-- JS dolduruyor -->
     <div id="sectionList"></div>
 
-    <!-- footer -->
     <div id="leftFooter">
       <div class="row">
         <div class="label">Sync</div>
@@ -36,47 +34,53 @@
         <button class="smallAction" id="settingsBtn">...</button>
       </div>
     </div>
-  </aside>
+  </div>
 
   <!-- ORTA: aktif bölümün sayfaları -->
-  <section id="middlePane">
+  <div id="middlePane">
     <div id="middleHeader">
       <div id="activeSectionName">Bölüm seçilmedi</div>
       <button class="smallAction" id="renameSectionBtn">⋮</button>
     </div>
 
-    <!-- sayfa kartları + '+ Yeni sayfa' butonu JS ile dolduruluyor -->
     <div id="pageList"></div>
-  </section>
+  </div>
 
-  <!-- SAĞ: editor alanı -->
-  <main id="editorPane">
-    <!-- ÜST BAR: Sayfa başlığı, path, status -->
-    <header id="topBar">
-      <div id="pageTitleWrap">
-        <div id="pageName">Seçili sayfa yok</div>
-        <div id="pagePath"></div>
-      </div>
-      <div id="actionsWrap">
-        <div id="status"></div>
-      </div>
-    </header>
-
-    <!-- FORMAT BAR doğrudan title'ın ALTINDA -->
-    <div id="formatBar">
-      <button class="fmtBtn" data-cmd="bold"><b>B</b></button>
-      <button class="fmtBtn" data-cmd="italic"><i>İ</i></button>
-      <button class="fmtBtn" data-cmd="underline"><u>U</u></button>
-      <button class="fmtBtn" data-cmd="h1">H1</button>
+  <!-- SAĞ: EDITOR -->
+  <div id="editorPane">
+    <!-- status alanı hala lazım, ama küçük -->
+    <div id="statusBar">
+      <div id="statusText"></div>
     </div>
 
-    <!-- TEXTAREA -->
-    <div id="editorWrap">
-      <textarea id="editor" placeholder="Notunu yaz..."></textarea>
-    </div>
-  </main>
+    <!-- Editor wrap -->
+    <div id="editorWrapOuter">
+      <div id="editorCard">
+        <!-- burası notun en üst kısmı (BAŞLIK, PATH, TOOLBAR) -->
+        <div id="editorHeaderArea">
+          <div id="pageTitleText"></div>
+          <div id="pageBreadcrumb"></div>
 
-  <!-- GENEL CRUD MODAL -->
+          <div id="formatBar">
+            <button class="fmtBtn" data-cmd="bold"><b>B</b></button>
+            <button class="fmtBtn" data-cmd="italic"><i>i</i></button>
+            <button class="fmtBtn" data-cmd="underline"><u>U</u></button>
+            <button class="fmtBtn" data-cmd="h1">H1</button>
+          </div>
+        </div>
+
+        <!-- burası asıl edit edilebilir alan -->
+        <div
+          id="editor"
+          class="editorArea"
+          contenteditable="true"
+          placeholder="Notunu yaz..."
+        ></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GENEL -->
   <div id="modalOverlay" class="overlay hidden">
     <div id="modalBox" class="modalBox">
       <div id="modalTitle" class="modalTitle">Modal Title</div>
@@ -88,42 +92,6 @@
     </div>
   </div>
 
-  <!-- AYARLAR MODALI -->
-  <div id="settingsOverlay" class="overlay hidden">
-    <div class="modalBox">
-      <div class="modalTitle">Ayarlar</div>
-      <div class="modalBody">
-
-        <div class="settingsRow">
-          <div class="settingsLabel">Sync şimdi</div>
-          <button class="smallAction" id="settingsSyncBtn">Çek / Güncelle</button>
-        </div>
-
-        <div class="settingsRow">
-          <div class="settingsLabel">Dışa aktar (zip)</div>
-          <button class="smallAction" id="settingsExportBtn">İndir (TODO)</button>
-        </div>
-
-        <div class="settingsRow">
-          <div class="settingsLabel">Çıkış</div>
-          <button class="smallAction dangerBorder" id="settingsLogoutBtn">Logout (TODO)</button>
-        </div>
-
-        <div style="font-size:11px;color:#666;margin-top:12px;">
-          Versiyon: local-dev<br/>
-          Son snapshot: <span id="settingsLastGen">-</span>
-        </div>
-      </div>
-
-      <div class="modalActions">
-        <button id="settingsCloseBtn" class="modalBtn cancelBtn">Kapat</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- scripts -->
-  <script src="/js/state.js"></script>
-  <script src="/js/ui.js"></script>
   <script src="/js/main.js"></script>
 </body>
 </html>

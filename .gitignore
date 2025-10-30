@@ -3,4 +3,4 @@ data/
 .env
 *.log
 *.swp
-.DS_Store
+.DS_Store.htpasswd

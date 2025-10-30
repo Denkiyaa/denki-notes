@@ -314,7 +314,6 @@ body{
   background:var(--bg-active);
   z-index:2;
 }
-
 .pageListTitle{
   font-size:13px;
   font-weight:500;
@@ -351,7 +350,7 @@ body{
 .pageListMenuDropdown{
   position:absolute;
   right:6px;
-  top:30px;
+  top:32px;           /* aşağı doğru açılsın */
   min-width:150px;
   max-width:200px;
   background:var(--bg-card);
@@ -405,7 +404,154 @@ body{
   background:#4a4a51;
 }
 
-/* MODAL BASE */
+/* RIGHT (EDITOR) */
+#editorPane{
+  flex:1;
+  background:var(--bg-col3);
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+}
+
+/* ÜSTTE SAYFA ADI + PATH + STATUS */
+#pageHeaderBar {
+  background: var(--bg-col1);
+  border-bottom: 1px solid var(--border);
+  padding: var(--pad-md) var(--pad-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pageHeaderMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pageHeaderTitle {
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pageHeaderPath {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.3;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusText {
+  font-size: 12px;
+  color: #6f6;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* TOOLBAR */
+#editorToolbar {
+  background: var(--bg-col1);
+  border-bottom: 1px solid var(--border);
+  padding: 8px var(--pad-lg);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.toolbarBtn {
+  background: #303036;
+  border: 0;
+  border-radius: var(--radius-md);
+  color:#fff;
+  font-size:13px;
+  font-weight:500;
+  padding:6px 10px;
+  line-height:1;
+  cursor:pointer;
+}
+.toolbarBtn:hover {
+  background: var(--bg-active);
+}
+
+/* CONTENT AREA */
+#editorWrap {
+  flex:1;
+  padding: var(--pad-lg);
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--bg-col3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* büyük başlık input */
+#noteTitleInput {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--border);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 0 0 6px 0;
+  outline: none;
+  width: 100%;
+}
+#noteTitleInput:focus {
+  border-bottom-color: var(--bg-active);
+}
+
+/* not kutusu */
+#editorBox {
+  background: var(--bg-editor);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--pad-md);
+  flex: 1;
+  min-height: 50vh;
+  display: flex;
+  overflow: auto;
+}
+
+/* contentEditable alan */
+.editorArea {
+  flex:1;
+  color:#fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size:14px;
+  line-height:1.4;
+  outline:none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 100%;
+}
+
+/* placeholder hilesi */
+.editorArea[placeholder]:empty:before {
+  content: attr(placeholder);
+  color:#777;
+  pointer-events:none;
+}
+
+/* başlıklar içeride güzel görünsün */
+.editorArea h1 {
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  padding-bottom:4px;
+  margin: 12px 0 8px 0;
+  color:#fff;
+}
+
+/* MODAL */
 .overlay{
   position:fixed;
   inset:0;
@@ -482,29 +628,6 @@ body{
   color:#fff;
 }
 
-.settingsRow{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-  font-size:13px;
-  color:var(--text-main);
-}
-.settingsLabel{
-  color:var(--text-main);
-  font-size:13px;
-  line-height:1.4;
-}
-.dangerBorder{
-  border-color:var(--danger) !important;
-  color:var(--danger) !important;
-}
-.dangerBorder:hover{
-  background:var(--bg-danger) !important;
-  color:#fff !important;
-  border-color:var(--bg-danger) !important;
-}
-
 /* RESPONSIVE */
 @media(max-width:800px){
   #leftPane{width:200px;min-width:200px;max-width:200px;}
@@ -512,7 +635,7 @@ body{
   #brandTitle{font-size:14px;}
 }
 
-/* Scrollbars */
+/* SCROLLBAR STYLING */
 #sectionList::-webkit-scrollbar,
 #pageList::-webkit-scrollbar,
 #editorWrap::-webkit-scrollbar {
@@ -535,6 +658,7 @@ body{
   background:#777a;
 }
 
+/* firefox scrollbars */
 #sectionList,
 #pageList,
 #editorWrap{
