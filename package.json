@@ -1,9 +1,10 @@
 {
   "name": "denki-notes",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js",
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "body-parser": "^1.20.3",

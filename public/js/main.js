@@ -45,6 +45,21 @@ function formatLocal(ts){
   });
 }
 
+// Meta line under title: Day, Date and Time
+function updatePageMeta(ts){
+  const dEl = $("pageMetaDate");
+  const tEl = $("pageMetaTime");
+  if(!dEl || !tEl) return;
+  const d = ts ? new Date(ts) : new Date();
+  const locale = navigator.language || 'en-US';
+  dEl.textContent = d.toLocaleDateString(locale, {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+  });
+  tEl.textContent = d.toLocaleTimeString(locale, {
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+}
+
 
 // ===== SNAPSHOT =====
 async function fetchSnapshot(){
@@ -211,6 +226,58 @@ function renderPages(){
   headerNameEl.textContent = sec.title || sec.slug;
   listEl.innerHTML = "";
 
+  // Bind container-level DnD handlers once (for top-of-list drops)
+  if(!listEl._dndBound){
+    listEl.addEventListener("dragover", (ev)=>{
+      ev.preventDefault();
+      const first = listEl.querySelector('.pageListItem');
+      if(!first) return;
+      const rect = first.getBoundingClientRect();
+      // Highlight top of first item when cursor is above it
+      first.style.borderTop = (ev.clientY < rect.top) ? "2px solid var(--bg-active)" : "";
+    });
+
+    listEl.addEventListener("drop", async (ev)=>{
+      ev.preventDefault();
+      const first = listEl.querySelector('.pageListItem');
+      if(first){ first.style.borderTop = ""; }
+      if(!dragPageSlug) return;
+
+      // Only handle as 'drop-to-top' if dropped above the first card
+      if(first){
+        const rect = first.getBoundingClientRect();
+        if(ev.clientY >= rect.top) return; // let item-level handler deal with it
+      }
+
+      const secObj = snapshotCache.topics[0].sections.find(s=>s.slug===currentSection);
+      if(!secObj) return;
+
+      const currentOrder = secObj.pages.map(x=>x.slug);
+      if(!currentOrder.includes(dragPageSlug)) return;
+      const newOrder = currentOrder.filter(sl=>sl!==dragPageSlug);
+      newOrder.unshift(dragPageSlug);
+
+      dragPageSlug = null;
+
+      // apply
+      secObj.pages.sort((a,b)=> newOrder.indexOf(a.slug)-newOrder.indexOf(b.slug));
+      renderPages();
+
+      try {
+        await callApi(`/api/section/${currentTopic}/${currentSection}/reorder-pages`, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ order: newOrder })
+        });
+        setStatus("sıra kaydedildi");
+      } catch(e){
+        setStatus("sıra kaydedilemedi");
+      }
+    });
+
+    listEl._dndBound = true;
+  }
+
   sec.pages?.forEach(p=>{
     const item = document.createElement("div");
     item.className = "pageListItem";
@@ -229,21 +296,30 @@ function renderPages(){
 
     item.addEventListener("dragend",()=>{
       item.style.opacity = "";
+      item.style.borderTop = "";
+      item.style.borderBottom = "";
     });
 
     item.addEventListener("dragover",(ev)=>{
       ev.preventDefault();
       ev.dataTransfer.dropEffect = "move";
-      item.style.outline = "1px solid var(--bg-active)";
+      const rect = item.getBoundingClientRect();
+      const before = ev.clientY < (rect.top + rect.height / 2);
+      // visual indicator for insertion position
+      item.style.borderTop = before ? "2px solid var(--bg-active)" : "";
+      item.style.borderBottom = before ? "" : "2px solid var(--bg-active)";
     });
 
     item.addEventListener("dragleave",()=>{
-      item.style.outline = "";
+      item.style.borderTop = "";
+      item.style.borderBottom = "";
     });
 
     item.addEventListener("drop", async (ev)=>{
       ev.preventDefault();
-      item.style.outline = "";
+      ev.stopPropagation();
+      item.style.borderTop = "";
+      item.style.borderBottom = "";
 
       const fromSlug = dragPageSlug;
       const toSlug   = p.slug;
@@ -254,13 +330,20 @@ function renderPages(){
       const secObj = snapshotCache.topics[0].sections.find(s=>s.slug===currentSection);
       if(!secObj) return;
 
-      const order = secObj.pages.map(x=>x.slug);
-      const fromIdx = order.indexOf(fromSlug);
-      const toIdx   = order.indexOf(toSlug);
-      if(fromIdx===-1 || toIdx===-1) return;
+      // Build new order inserting before/after based on cursor position
+      const before = (()=>{
+        const rect = item.getBoundingClientRect();
+        return ev.clientY < (rect.top + rect.height / 2);
+      })();
 
-      order.splice(toIdx,0,order.splice(fromIdx,1)[0]);
-      secObj.pages.sort((a,b)=> order.indexOf(a.slug)-order.indexOf(b.slug));
+      const currentOrder = secObj.pages.map(x=>x.slug);
+      const newOrder = currentOrder.filter(sl=>sl!==fromSlug);
+      const toIdxNew = newOrder.indexOf(toSlug);
+      if(toIdxNew === -1) return;
+      const insertAt = before ? toIdxNew : toIdxNew + 1;
+      newOrder.splice(insertAt, 0, fromSlug);
+
+      secObj.pages.sort((a,b)=> newOrder.indexOf(a.slug)-newOrder.indexOf(b.slug));
 
       renderPages();
 
@@ -268,7 +351,7 @@ function renderPages(){
         await callApi(`/api/section/${currentTopic}/${currentSection}/reorder-pages`, {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ order })
+          body: JSON.stringify({ order: newOrder })
         });
         setStatus("sıra kaydedildi");
       } catch(e){
@@ -309,7 +392,8 @@ function renderPages(){
       openModal("renamePage", {
         topicSlug: topic.slug,
         sectionSlug: sec.slug,
-        pageSlug: p.slug
+        pageSlug: p.slug,
+        pageTitle: p.title || p.slug
       });
     };
     dd.appendChild(renameBtn);
@@ -404,6 +488,9 @@ async function openPage(topicSlug, sectionSlug, pageSlug){
     setStatus("açıldı");
   }
 
+  // meta line below title
+  updatePageMeta(pageData.updatedAt);
+
   renderSections();
   renderPages();
 
@@ -454,7 +541,8 @@ async function autoSave(){
   const ttl = $("pageTitleText");
 
   const newContent = ed ? ed.innerHTML : "";
-  const newTitle   = ttl ? ttl.textContent.trim() : currentPage;
+  const newTitleRaw = ttl ? ttl.textContent.trim() : currentPage;
+  const newTitle   = newTitleRaw || currentPage;
 
   setStatus("kaydediliyor...");
 
@@ -470,6 +558,7 @@ async function autoSave(){
 
     if(r.ok){
       const js = await r.json();
+      try { updatePageMeta(js.updatedAt); } catch {}
       setStatus(`✓ kaydedildi · ${formatLocal(js.updatedAt || "")}`);
 
       // snapshot güncelle
@@ -580,7 +669,7 @@ function openModal(mode, data){
       <input id="modalInputSlug" type="text" value="${oldSlug}"/>
 
       <label>Görünen başlık:</label>
-      <input id="modalInputTitle" type="text" value="${oldSlug}"/>
+      <input id="modalInputTitle" type="text" value="${(data.pageTitle || oldSlug).replace(/"/g,'&quot;')}"/>
     `;
     cBtn.textContent = "Kaydet";
   }
@@ -721,10 +810,17 @@ async function handleModalConfirm(){
     const slugEl  = $("modalInputSlug");
     const titleEl = $("modalInputTitle");
     const newSlug  = (slugEl.value  || "").trim();
-    const newTitle = (titleEl.value || "").trim() || newSlug;
+    let newTitle = (titleEl.value || "").trim();
     if(!newSlug){ return; }
 
     const { topicSlug, sectionSlug, pageSlug } = modalData;
+    const oldTitle = (modalData.pageTitle || pageSlug).trim();
+    if(!newTitle){
+      newTitle = newSlug;
+    } else if(newTitle === oldTitle && newSlug !== pageSlug){
+      // keep visible name in sync if user only changed slug
+      newTitle = newSlug;
+    }
 
     const r = await callApi(`/api/page/${topicSlug}/${sectionSlug}/${pageSlug}/rename`, {
       method:"POST",
@@ -782,6 +878,26 @@ function wireUI(){
   const ed = $("editor");
   if(ed){
     ed.addEventListener("input", markDirty);
+  }
+  // page title editing (contenteditable)
+  const titleEl = $("pageTitleText");
+  if(titleEl){
+    titleEl.addEventListener("input", ()=>{
+      // avoid rewriting here to keep caret stable
+      markDirty();
+    });
+    titleEl.addEventListener("keydown", (ev)=>{
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        const ed2 = $("editor");
+        if(ed2) ed2.focus();
+      }
+    });
+    titleEl.addEventListener("paste", (ev)=>{
+      ev.preventDefault();
+      const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
+      document.execCommand('insertText', false, text.replace(/\s*\n+\s*/g, ' '));
+    });
   }
 
   // toolbar butonları

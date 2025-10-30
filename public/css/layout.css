@@ -98,7 +98,8 @@ body{
   line-height:1.4;
   cursor:pointer;
   margin-bottom:4px;
-  overflow:hidden;
+  /* allow dropdown menus to overflow */
+  overflow:visible;
 }
 .sectionRow.active{
   background:var(--bg-active);
@@ -307,12 +308,11 @@ body{
   cursor:pointer;
   display:flex;
   flex-direction:column;
-  overflow:hidden;
-  z-index:1;
+  /* don't clip the action dropdown */
+  overflow:visible;
 }
 .pageListItem.active{
   background:var(--bg-active);
-  z-index:2;
 }
 .pageListTitle{
   font-size:13px;

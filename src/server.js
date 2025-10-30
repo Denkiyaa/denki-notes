@@ -163,6 +163,21 @@ async function buildSnapshot() {
         pageSlugs = [];
       }
 
+      // apply saved order if present
+      try {
+        const orderPath = path.join(sectionDir, ".order.json");
+        if (fs.existsSync(orderPath)) {
+          const raw = await fsp.readFile(orderPath, "utf8");
+          const orderArr = JSON.parse(raw);
+          if (Array.isArray(orderArr)) {
+            const inOrder = pageSlugs.filter(s => orderArr.includes(s));
+            const rest    = pageSlugs.filter(s => !orderArr.includes(s)).sort();
+            inOrder.sort((a,b)=> orderArr.indexOf(a) - orderArr.indexOf(b));
+            pageSlugs = [...inOrder, ...rest];
+          }
+        }
+      } catch {}
+
       const pagesArr = [];
       for (const pSlug of pageSlugs) {
         const pObj = await loadPageObj(topicSlug, sectionSlug, pSlug);
@@ -241,6 +256,22 @@ app.post("/api/page/:topic/:section/:page/rename", async (req,res)=>{
   }
 
   const merged = await renamePageObj(topic, section, page, newSlug, newTitle);
+
+  // keep order file consistent if present
+  try {
+    const sectionDir = path.join(DATA_DIR, topic, section);
+    const orderFile = path.join(sectionDir, ".order.json");
+    if (fs.existsSync(orderFile)) {
+      const raw = await fsp.readFile(orderFile, "utf8");
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        const next = arr.map(s => s === page ? newSlug : s);
+        // ensure no duplicates
+        const dedup = next.filter((s, i) => next.indexOf(s) === i);
+        await fsp.writeFile(orderFile, JSON.stringify(dedup, null, 2), "utf8");
+      }
+    }
+  } catch {}
   res.json({ ok:true, updatedAt: merged.updatedAt, newSlug });
 });
 

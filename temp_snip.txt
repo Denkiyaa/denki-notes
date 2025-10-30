@@ -1,0 +1,41 @@
+      if(currentTopic===topicSlug && currentSection===sectionSlug && currentPage===pageSlug){
+        currentPage = null;
+        clearEditor();
+      }
+      await fetchSnapshot();
+      setStatus("silindi");
+    } else {
+      setStatus("silinemedi");
+    }
+    closeModal();
+    return;
+  }
+}
+
+
+// ===== WIRING =====
+function wireUI(){
+  // contenteditable değişince autosave tetikle
+  const ed = $("editor");
+  if(ed){
+    ed.addEventListener("input", markDirty);
+  }
+  // page title editing (contenteditable)
+  const titleEl = $("pageTitleText");
+  if(titleEl){
+    titleEl.addEventListener("input", ()=>{
+      titleEl.textContent = (titleEl.textContent || "").replace(/\n+/g, " ").trimStart();
+      markDirty();
+    });
+    titleEl.addEventListener("keydown", (ev)=>{
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        const ed2 = $("editor");
+        if(ed2) ed2.focus();
+      }
+    });
+  }
+
+  // toolbar butonları
+  document.querySelectorAll(".fmtBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
